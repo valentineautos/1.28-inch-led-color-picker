@@ -98,7 +98,7 @@ public:
 };
 LGFX tft;
 Preferences prefs;
-uint8_t clientAddress[] = {0xE4, 0x65, 0xB8, 0x75, 0x81, 0xCC};
+uint8_t clientAddress[] = {0xXX, 0xXX, 0xXX, 0xXX, 0xXX, 0xXX}; // replace with your ESP32 receiver MAC Address
 
 esp_now_peer_info_t peerInfo;
 
