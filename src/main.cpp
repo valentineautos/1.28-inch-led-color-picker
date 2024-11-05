@@ -5,6 +5,8 @@
 #include <string.h>
 #include <Preferences.h>
 #include "main.h"
+#include "ESPNowW.h"
+#include "WiFi.h"
 
 class LGFX : public lgfx::LGFX_Device
 {
@@ -96,6 +98,18 @@ public:
 };
 LGFX tft;
 Preferences prefs;
+uint8_t clientAddress[] = {0xE4, 0x65, 0xB8, 0x75, 0x81, 0xCC};
+
+esp_now_peer_info_t peerInfo;
+
+typedef struct message_struct {
+  int red;
+  int green;
+  int blue;
+  int power;
+} message_struct;
+
+message_struct myData;
 
 static const uint32_t screenWidth = WIDTH;
 static const uint32_t screenHeight = HEIGHT;
@@ -109,7 +123,7 @@ const uint32_t SCREEN_DIM_TIMEOUT = 10000;
 const uint8_t DIM_BRIGHTNESS = 10;
 const uint8_t DEFAULT_BRIGHTNESS = 100;
 uint32_t lastActivityTime = 0;
-bool isScreenDimmed = false;   
+bool isScreenDimmed = false;
 
 void screenBrightness(uint8_t value)
 {
@@ -183,6 +197,21 @@ lv_obj_t *power_arc;
 lv_obj_t *power_btn;
 lv_obj_t *back_btn;
 
+void send_esp_data() {
+  myData.red = glow_red;
+  myData.green = glow_green;
+  myData.blue = glow_blue;
+  myData.power = power_state;
+
+  esp_err_t result = esp_now_send(clientAddress, (uint8_t *) &myData, sizeof(myData));
+
+  if (result == ESP_OK) {
+    Serial.print("Sent successfully");
+  } else {
+    Serial.print("Error sending");
+  }
+}
+
 // move from home screen to color picker screen
 void arc_click_event(lv_event_t *e) {
   lv_scr_load_anim(picker_screen, LV_SCR_LOAD_ANIM_MOVE_BOTTOM, 400, 0, false);
@@ -199,13 +228,17 @@ void power_click_event(lv_event_t *e) {
     lv_obj_set_style_arc_color(power_arc, lv_color_make(glow_red, glow_green, glow_blue), LV_PART_MAIN);
     lv_obj_set_style_arc_color(power_arc, lv_color_make(glow_red, glow_green, glow_blue), LV_PART_INDICATOR);
 
+    power_state = 1;
     prefs.putInt("powerState", 1);
   } else {
     lv_obj_set_style_arc_color(power_arc, lv_color_make(40, 40, 40), LV_PART_MAIN); // Set to gray
     lv_obj_set_style_arc_color(power_arc, lv_color_make(40, 40, 40), LV_PART_INDICATOR);
 
+    power_state = 0;
     prefs.putInt("powerState", 0);
   }
+
+  send_esp_data();
 }
 
 // Color data structure
@@ -230,6 +263,8 @@ void color_click_event(lv_event_t *e) {
   prefs.putInt("glowRed", red);
   prefs.putInt("glowGreen", green);
   prefs.putInt("glowBlue", blue);
+
+  send_esp_data();
 
   if (prefs.getInt("powerState") == 1) {
     lv_obj_set_style_arc_color(power_arc, lv_color_make(red, green, blue), LV_PART_MAIN); // Change color to active
@@ -369,6 +404,11 @@ void make_picker_screen() {
   make_color_btns();
 }
 
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+  Serial.print("\r\nLast Packet Send Status:\t");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -407,8 +447,28 @@ void setup()
   make_home_screen();
   make_picker_screen();
 
-  lv_scr_load(home_screen); 
- 
+  lv_scr_load(home_screen);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin();
+
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("Error starting ESP Now");
+    return;
+  }
+
+  esp_now_register_send_cb(OnDataSent);
+
+  memcpy(peerInfo.peer_addr, clientAddress, 6);
+  peerInfo.channel = 0;  
+  peerInfo.encrypt = false;
+  
+  // Add peer        
+  if (esp_now_add_peer(&peerInfo) != ESP_OK){
+    Serial.println("Failed to add peer");
+    return;
+  }
+
   Serial.print("Setup finished");
 }
 

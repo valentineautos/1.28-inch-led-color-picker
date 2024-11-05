@@ -1,0 +1,37 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"name": "esp32-led-client",
+			"path": "../../esp32-led-client"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.embeddedhtml": "html",
+			"75_2_dial.h": "c",
+			"radar.h": "c",
+			"79_2_dial.h": "c",
+			"racing.h": "c",
+			"chrono": "cpp",
+			"app_hal.h": "c",
+			"elecrow.h": "c",
+			"contacts.h": "c",
+			"variant": "c",
+			"*.tcc": "cpp",
+			"optional": "cpp",
+			"istream": "cpp",
+			"ostream": "cpp",
+			"ratio": "cpp",
+			"system_error": "cpp",
+			"array": "cpp",
+			"functional": "cpp",
+			"regex": "cpp",
+			"tuple": "cpp",
+			"type_traits": "cpp",
+			"utility": "cpp"
+		}
+	}
+}
